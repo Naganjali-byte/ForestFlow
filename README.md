@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌲 ForestFlow — Mindful Productivity & Focus Web App
 
-## Getting Started
+A nature-themed, mindful task scheduling and focus management web application. Designed to encourage calm, consistent daily productivity through incremental task progress, an interactive calendar strip, a customizable Pomodoro clock, and a virtual growing forest driven by focus streaks.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- 🌿 **Home Sanctuary:** Daily dynamic affirmations, today's focus progress ring, and active daily tasks.
+- 📈 **Incremental Task Progress:** Multi-day progress tracking (`+25%` / `-25%`) built for real-world projects that take more than one day to finish.
+- 📅 **Interactive Calendar Strip:** 7-day horizontal date selector and direct date-picker to schedule tasks for today, tomorrow, or future dates.
+- ⏱️ **Focus Clock (Pomodoro):** 25-minute focus sprints and 5-minute restorative breaks with built-in Web Audio completion chimes.
+- 🌱 **Virtual Forest & Streak Tracker:** Complete focus sessions to grow cedar and pine trees, tracking your consistency over time.
+- 📱 **Multi-Device Responsive:** Designed to feel like a native mobile app on phones while staying neatly centered on desktop monitors.
+- 💾 **Local Persistence:** Automatic browser persistence for tasks, streak counters, and account profiles.
+- 🐳 **Docker Containerized:** Ready for containerized deployment with multi-stage Docker builds.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Tech Stack
 
-## Learn More
+- **Framework:** [Next.js](https://nextjs.org/) (React 19, App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS & Lucide Icons
+- **Audio:** Web Audio API (zero external asset dependencies)
+- **DevOps:** Docker (Multi-stage build)
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🚀 Getting Started
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Local Development
 
-## Deploy on Vercel
+1. **Clone the repository:**
+   \`\`\`bash
+   git clone https://github.com/YOUR_USERNAME/forest-flow.git
+   cd forest-flow
+   \`\`\`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+2. **Install dependencies:**
+   \`\`\`bash
+   npm install
+   \`\`\`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. **Run the development server:**
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🐳 Running with Docker
+
+You can build and run the application inside an isolated Docker container:
+
+1. **Build the Docker image:**
+   \`\`\`bash
+   docker build -t forest-flow .
+   \`\`\`
+
+2. **Run the container:**
+   \`\`\`bash
+   docker run -p 3000:3000 --name forest-container forest-flow
+   \`\`\`
+
+3. Visit [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 📄 License
+This project is open source and available under the [MIT License](LICENSE).
