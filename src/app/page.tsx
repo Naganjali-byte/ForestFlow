@@ -23,6 +23,7 @@ import {
   Volume2, 
   VolumeX,
   Trophy,
+  ChevronLeft,
   ChevronRight
 } from "lucide-react";
 
@@ -31,7 +32,7 @@ interface Task {
   title: string;
   completed: boolean;
   category: "Work" | "Personal" | "Health" | "Study";
-  dueDate: "today" | "tomorrow" | "upcoming";
+  dueDate: string; // ISO format: YYYY-MM-DD
   time?: string;
 }
 
@@ -43,15 +44,30 @@ interface UserProfile {
 }
 
 const AFFIRMATIONS = [
-  { text: "Like a tree, stay grounded in patience while reaching upward.", tag: "Patience" },
+  { text: "Like a tree, stay grounded in patience while quietly reaching upward.", tag: "Patience" },
   { text: "Small daily habits compound into extraordinary lifelong growth.", tag: "Discipline" },
   { text: "Protect your energy. One calm, intentional task at a time.", tag: "Clarity" },
   { text: "Deep roots aren't built in a day; consistency creates your forest.", tag: "Resilience" }
 ];
 
+// Helper to format Date to YYYY-MM-DD string
+const toDateKey = (date: Date): string => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<"home" | "tasks" | "timer" | "profile">("home");
   const [quoteIdx, setQuoteIdx] = useState(0);
+
+  // Today's Date representation
+  const todayKey = toDateKey(new Date());
+
+  // --- Calendar Date State for Task Tab ---
+  const [selectedDate, setSelectedDate] = useState<string>(todayKey);
+  const [calendarOffset, setCalendarOffset] = useState<number>(0);
 
   // --- Auth State ---
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -59,12 +75,10 @@ export default function App() {
   const [authName, setAuthName] = useState("");
   const [authEmail, setAuthEmail] = useState("");
 
-  // --- Task Schedule Filter ---
-  const [taskView, setTaskView] = useState<"today" | "tomorrow" | "upcoming">("today");
+  // --- Tasks State ---
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newCategory, setNewCategory] = useState<"Work" | "Personal" | "Health" | "Study">("Work");
-  const [newTaskDate, setNewTaskDate] = useState<"today" | "tomorrow" | "upcoming">("today");
 
   // --- Pomodoro State ---
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -72,7 +86,7 @@ export default function App() {
   const [mode, setMode] = useState<"focus" | "break">("focus");
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Load saved state
+  // Load saved state on mount
   useEffect(() => {
     const savedUser = localStorage.getItem("forestflow_user");
     if (savedUser) {
@@ -90,14 +104,19 @@ export default function App() {
     if (savedTasks) {
       setTasks(JSON.parse(savedTasks));
     } else {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const nextWeek = new Date();
+      nextWeek.setDate(nextWeek.getDate() + 4);
+
       setTasks([
-        { id: "1", title: "Complete design mockups", completed: true, category: "Work", dueDate: "today", time: "09:30 AM" },
-        { id: "2", title: "Review tomorrow's priorities", completed: false, category: "Personal", dueDate: "today", time: "05:00 PM" },
-        { id: "3", title: "Prepare weekly status report", completed: false, category: "Work", dueDate: "tomorrow", time: "10:00 AM" },
-        { id: "4", title: "Read 30 pages of textbook", completed: false, category: "Study", dueDate: "upcoming", time: "Weekend" }
+        { id: "1", title: "Complete design mockups", completed: true, category: "Work", dueDate: todayKey, time: "09:30 AM" },
+        { id: "2", title: "Review tomorrow's priorities", completed: false, category: "Personal", dueDate: todayKey, time: "05:00 PM" },
+        { id: "3", title: "Prepare quarterly budget review", completed: false, category: "Work", dueDate: toDateKey(tomorrow), time: "10:00 AM" },
+        { id: "4", title: "Read 25 pages of textbook", completed: false, category: "Study", dueDate: toDateKey(nextWeek), time: "Weekend" }
       ]);
     }
-  }, []);
+  }, [todayKey]);
 
   // Sync tasks
   useEffect(() => {
@@ -113,7 +132,7 @@ export default function App() {
     }
   }, [user]);
 
-  // Beep Audio chime using Web Audio API
+  // Audio chime
   const playChime = () => {
     if (!soundEnabled) return;
     try {
@@ -183,8 +202,8 @@ export default function App() {
       title: newTaskTitle,
       completed: false,
       category: newCategory,
-      dueDate: newTaskDate,
-      time: newTaskDate === "today" ? "Today" : newTaskDate === "tomorrow" ? "Tomorrow" : "Upcoming"
+      dueDate: selectedDate,
+      time: "Scheduled"
     };
     setTasks([newTask, ...tasks]);
     setNewTaskTitle("");
@@ -197,17 +216,24 @@ export default function App() {
     localStorage.setItem("forestflow_tasks", JSON.stringify(filtered));
   };
 
+  // Generates 7 consecutive days for the calendar strip
+  const getDaysArray = () => {
+    const days = [];
+    const base = new Date();
+    base.setDate(base.getDate() + calendarOffset);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  };
+
+  const calendarDays = getDaysArray();
+
   // Filter tasks
-  const todayTasks = tasks.filter(t => t.dueDate === "today");
-  const tomorrowTasks = tasks.filter(t => t.dueDate === "tomorrow");
-  const upcomingTasks = tasks.filter(t => t.dueDate === "upcoming");
-
-  const displayedTasks = taskView === "today" 
-    ? todayTasks 
-    : taskView === "tomorrow" 
-    ? tomorrowTasks 
-    : upcomingTasks;
-
+  const todayTasks = tasks.filter(t => t.dueDate === todayKey);
+  const tasksForSelectedDate = tasks.filter(t => t.dueDate === selectedDate);
   const todayCompleted = todayTasks.filter(t => t.completed).length;
   const progressPercent = todayTasks.length ? Math.round((todayCompleted / todayTasks.length) * 100) : 0;
 
@@ -229,7 +255,7 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#E3ECE3", display: "flex", alignItems: "center", justifyContent: "center", padding: "0" }}>
       
-      {/* Container that is responsive: full-screen on mobile, centered card on desktop */}
+      {/* Responsive Container */}
       <div style={{ width: "100%", maxWidth: "430px", height: "100vh", maxHeight: "880px", backgroundColor: "#FAF9F5", borderRadius: "28px", display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 20px 45px rgba(0,0,0,0.12)", border: "2px solid #D2DDD2", overflow: "hidden", position: "relative" }}>
         
         {/* TOP HEADER */}
@@ -244,21 +270,19 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <button 
-              onClick={() => setIsAuthModalOpen(true)}
-              style={{ backgroundColor: "#E8F5E9", color: "#2D6A4F", border: "1px solid #C8E6C9", padding: "5px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}
-            >
-              <User size={13} />
-              <span>{user ? user.name.split(" ")[0] : "Login"}</span>
-            </button>
-          </div>
+          <button 
+            onClick={() => setIsAuthModalOpen(true)}
+            style={{ backgroundColor: "#E8F5E9", color: "#2D6A4F", border: "1px solid #C8E6C9", padding: "5px 12px", borderRadius: "20px", fontSize: "12px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px", cursor: "pointer" }}
+          >
+            <User size={13} />
+            <span>{user ? user.name.split(" ")[0] : "Login"}</span>
+          </button>
         </header>
 
-        {/* MAIN SCROLLABLE CONTENT */}
+        {/* MAIN BODY AREA */}
         <main style={{ flex: 1, padding: "18px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
           
-          {/* ================= TAB 1: HOME (TODAY'S FOCUS) ================= */}
+          {/* ================= TAB 1: HOME (TODAY'S DATE ONLY) ================= */}
           {activeTab === "home" && (
             <>
               {/* Daily Affirmation */}
@@ -283,8 +307,11 @@ export default function App() {
               {/* Today's Progress Bar */}
               <div style={{ backgroundColor: "#FFFFFF", padding: "16px", borderRadius: "20px", border: "1px solid #E1E9E1" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: "800", color: "#1B4332" }}>Today&apos;s Progress</span>
-                  <span style={{ fontSize: "15px", fontWeight: "900", color: "#2D6A4F" }}>{progressPercent}%</span>
+                  <div>
+                    <span style={{ fontSize: "13px", fontWeight: "800", color: "#1B4332" }}>Today&apos;s Progress</span>
+                    <span style={{ fontSize: "11px", color: "#778C7B", display: "block" }}>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
+                  </div>
+                  <span style={{ fontSize: "18px", fontWeight: "900", color: "#2D6A4F" }}>{progressPercent}%</span>
                 </div>
                 <div style={{ width: "100%", height: "10px", backgroundColor: "#EBF3EB", borderRadius: "8px", overflow: "hidden" }}>
                   <div style={{ width: `${progressPercent}%`, height: "100%", backgroundColor: "#52B788", transition: "width 0.4s ease" }} />
@@ -297,19 +324,19 @@ export default function App() {
               {/* Present / Today's Active Tasks */}
               <div style={{ backgroundColor: "#FFFFFF", padding: "16px", borderRadius: "20px", border: "1px solid #E1E9E1" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: "800", color: "#1B4332" }}>Today&apos;s Active Tasks</span>
-                  <button onClick={() => setActiveTab("tasks")} style={{ background: "none", border: "none", color: "#2D6A4F", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>
-                    View All &rarr;
+                  <span style={{ fontSize: "13px", fontWeight: "800", color: "#1B4332" }}>Today&apos;s Focus List</span>
+                  <button onClick={() => { setSelectedDate(todayKey); setActiveTab("tasks"); }} style={{ background: "none", border: "none", color: "#2D6A4F", fontSize: "11px", fontWeight: "700", cursor: "pointer" }}>
+                    Open Calendar &rarr;
                   </button>
                 </div>
                 
                 {todayTasks.length === 0 ? (
-                  <p style={{ fontSize: "12px", color: "#8E9E8F", margin: 0, textAlign: "center", padding: "8px 0" }}>
-                    No tasks scheduled for today. Add one in Tasks!
+                  <p style={{ fontSize: "12px", color: "#8E9E8F", margin: 0, textAlign: "center", padding: "12px 0" }}>
+                    No tasks due today. Plan on the calendar in Tasks!
                   </p>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    {todayTasks.slice(0, 3).map((task) => (
+                    {todayTasks.map((task) => (
                       <div 
                         key={task.id} 
                         onClick={() => toggleTask(task.id)}
@@ -330,7 +357,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* Fast Jump to Clock */}
+              {/* Jump to Clock */}
               <div onClick={() => setActiveTab("timer")} style={{ backgroundColor: "#EBF7EE", border: "1px solid #C5E8CE", padding: "14px 16px", borderRadius: "18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                 <div>
                   <div style={{ fontSize: "10px", fontWeight: "800", color: "#2D6A4F", textTransform: "uppercase" }}>Focus Clock</div>
@@ -343,37 +370,88 @@ export default function App() {
             </>
           )}
 
-          {/* ================= TAB 2: TASKS (TODAY, TOMORROW, UPCOMING) ================= */}
+          {/* ================= TAB 2: TASKS WITH INTERACTIVE CALENDAR ================= */}
           {activeTab === "tasks" && (
             <>
-              {/* Day Filter Tabs */}
-              <div style={{ display: "flex", backgroundColor: "#EBF2EB", padding: "4px", borderRadius: "16px", gap: "4px" }}>
-                <button 
-                  onClick={() => setTaskView("today")}
-                  style={{ flex: 1, border: "none", padding: "8px", borderRadius: "12px", fontSize: "12px", fontWeight: "800", cursor: "pointer", backgroundColor: taskView === "today" ? "#2D6A4F" : "transparent", color: taskView === "today" ? "#FFFFFF" : "#2D6A4F" }}
-                >
-                  Today ({todayTasks.length})
-                </button>
-                <button 
-                  onClick={() => setTaskView("tomorrow")}
-                  style={{ flex: 1, border: "none", padding: "8px", borderRadius: "12px", fontSize: "12px", fontWeight: "800", cursor: "pointer", backgroundColor: taskView === "tomorrow" ? "#2D6A4F" : "transparent", color: taskView === "tomorrow" ? "#FFFFFF" : "#2D6A4F" }}
-                >
-                  Tomorrow ({tomorrowTasks.length})
-                </button>
-                <button 
-                  onClick={() => setTaskView("upcoming")}
-                  style={{ flex: 1, border: "none", padding: "8px", borderRadius: "12px", fontSize: "12px", fontWeight: "800", cursor: "pointer", backgroundColor: taskView === "upcoming" ? "#2D6A4F" : "transparent", color: taskView === "upcoming" ? "#FFFFFF" : "#2D6A4F" }}
-                >
-                  Upcoming ({upcomingTasks.length})
-                </button>
+              {/* Interactive Calendar Date Strip */}
+              <div style={{ backgroundColor: "#FFFFFF", padding: "14px", borderRadius: "20px", border: "1px solid #E1E9E1" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <CalendarIcon size={16} color="#2D6A4F" />
+                    <span style={{ fontSize: "13px", fontWeight: "800", color: "#1B4332" }}>
+                      {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <button 
+                      onClick={() => setCalendarOffset(calendarOffset - 7)} 
+                      style={{ border: "none", background: "#F1F5F1", borderRadius: "8px", padding: "4px", cursor: "pointer" }}
+                    >
+                      <ChevronLeft size={16} color="#2D6A4F" />
+                    </button>
+                    <button 
+                      onClick={() => { setCalendarOffset(0); setSelectedDate(todayKey); }}
+                      style={{ border: "1px solid #CCDBCD", background: "none", borderRadius: "8px", padding: "3px 8px", fontSize: "10px", fontWeight: "800", color: "#2D6A4F", cursor: "pointer" }}
+                    >
+                      Today
+                    </button>
+                    <button 
+                      onClick={() => setCalendarOffset(calendarOffset + 7)} 
+                      style={{ border: "none", background: "#F1F5F1", borderRadius: "8px", padding: "4px", cursor: "pointer" }}
+                    >
+                      <ChevronRight size={16} color="#2D6A4F" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 7-Day Horizontal Strip */}
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
+                  {calendarDays.map((dateObj) => {
+                    const dKey = toDateKey(dateObj);
+                    const isSelected = selectedDate === dKey;
+                    const isToday = todayKey === dKey;
+                    const dayTasksCount = tasks.filter(t => t.dueDate === dKey && !t.completed).length;
+
+                    return (
+                      <button
+                        key={dKey}
+                        onClick={() => setSelectedDate(dKey)}
+                        style={{
+                          flex: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          padding: "8px 4px",
+                          borderRadius: "14px",
+                          border: isSelected ? "2px solid #2D6A4F" : "1px solid transparent",
+                          backgroundColor: isSelected ? "#2D6A4F" : isToday ? "#EBF7EE" : "#FAF9F6",
+                          color: isSelected ? "#FFFFFF" : isToday ? "#2D6A4F" : "#556B58",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <span style={{ fontSize: "10px", fontWeight: "700", textTransform: "uppercase" }}>
+                          {dateObj.toLocaleDateString("en-US", { weekday: "narrow" })}
+                        </span>
+                        <span style={{ fontSize: "14px", fontWeight: "900", marginTop: "2px" }}>
+                          {dateObj.getDate()}
+                        </span>
+                        {dayTasksCount > 0 && (
+                          <div style={{ width: "5px", height: "5px", borderRadius: "50%", backgroundColor: isSelected ? "#FFFFFF" : "#52B788", marginTop: "4px" }} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Add Task Input */}
+              {/* Add Task Input for Selected Date */}
               <form onSubmit={addTask} style={{ backgroundColor: "#FFFFFF", padding: "14px", borderRadius: "18px", border: "1px solid #E1E9E1", display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ display: "flex", gap: "8px" }}>
                   <input 
                     type="text" 
-                    placeholder={`Add task for ${taskView}...`}
+                    placeholder={`Add task for ${new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}...`}
                     value={newTaskTitle}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
                     style={{ flex: 1, padding: "10px 12px", borderRadius: "12px", border: "1px solid #CCDBCD", fontSize: "13px", outline: "none" }}
@@ -384,42 +462,47 @@ export default function App() {
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  {/* Category options */}
                   <div style={{ display: "flex", gap: "6px" }}>
-                    {(["today", "tomorrow", "upcoming"] as const).map((d) => (
-                      <button 
-                        key={d}
-                        type="button"
-                        onClick={() => setNewTaskDate(d)}
-                        style={{ border: "1px solid #CCDBCD", backgroundColor: newTaskDate === d ? "#2D6A4F" : "#FFFFFF", color: newTaskDate === d ? "#FFFFFF" : "#556B58", padding: "4px 8px", borderRadius: "8px", fontSize: "10px", fontWeight: "700", cursor: "pointer", textTransform: "capitalize" }}
-                      >
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div style={{ display: "flex", gap: "4px" }}>
-                    {(["Work", "Study", "Health"] as const).map((cat) => (
+                    {(["Work", "Personal", "Health", "Study"] as const).map((cat) => (
                       <button 
                         key={cat}
                         type="button"
-                        onClick={() => setNewCategory(cat as any)}
-                        style={{ border: "1px solid #CCDBCD", backgroundColor: newCategory === cat ? "#E8F5E9" : "#FFFFFF", color: "#2D6A4F", padding: "4px 8px", borderRadius: "8px", fontSize: "10px", fontWeight: "700", cursor: "pointer" }}
+                        onClick={() => setNewCategory(cat)}
+                        style={{ border: "1px solid #CCDBCD", backgroundColor: newCategory === cat ? "#2D6A4F" : "#FFFFFF", color: newCategory === cat ? "#FFFFFF" : "#556B58", padding: "4px 8px", borderRadius: "8px", fontSize: "10px", fontWeight: "700", cursor: "pointer" }}
                       >
                         {cat}
                       </button>
                     ))}
                   </div>
+
+                  {/* Pick any custom date from input */}
+                  <input 
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    style={{ border: "1px solid #CCDBCD", borderRadius: "8px", padding: "3px 6px", fontSize: "10px", color: "#2D6A4F", fontWeight: "700", outline: "none", cursor: "pointer" }}
+                  />
                 </div>
               </form>
 
-              {/* Task List */}
+              {/* Tasks for the Selected Calendar Day */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {displayedTasks.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "30px 0", color: "#8E9E8F", fontSize: "12px" }}>
-                    No tasks found for {taskView}. Click above to add!
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 4px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "800", color: "#1B4332" }}>
+                    Tasks for {selectedDate === todayKey ? "Today" : new Date(selectedDate + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  </span>
+                  <span style={{ fontSize: "11px", fontWeight: "700", color: "#778C7B" }}>
+                    {tasksForSelectedDate.filter(t => !t.completed).length} pending
+                  </span>
+                </div>
+
+                {tasksForSelectedDate.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "24px 0", color: "#8E9E8F", fontSize: "12px", backgroundColor: "#FFFFFF", borderRadius: "16px", border: "1px solid #E1EAE1" }}>
+                    No tasks scheduled for this day. Plan something above!
                   </div>
                 ) : (
-                  displayedTasks.map((task) => (
+                  tasksForSelectedDate.map((task) => (
                     <div 
                       key={task.id} 
                       onClick={() => toggleTask(task.id)}
@@ -431,7 +514,7 @@ export default function App() {
                           <span style={{ fontSize: "13px", fontWeight: "700", textDecoration: task.completed ? "line-through" : "none", color: task.completed ? "#8E9E8F" : "#1B4332", display: "block" }}>
                             {task.title}
                           </span>
-                          <span style={{ fontSize: "10px", color: "#8E9E8F" }}>{task.category} • {task.time || task.dueDate}</span>
+                          <span style={{ fontSize: "10px", color: "#8E9E8F" }}>{task.category} • {task.dueDate}</span>
                         </div>
                       </div>
                       <button onClick={(e) => deleteTask(task.id, e)} style={{ background: "none", border: "none", color: "#C48888", cursor: "pointer" }}>
