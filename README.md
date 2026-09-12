@@ -33,7 +33,7 @@ A nature-themed, mindful task scheduling and focus management web application. D
 
 1. **Clone the repository:**
    \`\`\`bash
-   git clone https://github.com/YOUR_USERNAME/forest-flow.git
+   git clone https://github.com/Naganjali-byteE/forest-flow.git
    cd forest-flow
    \`\`\`
 
